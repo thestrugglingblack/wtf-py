@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "wtfpy"
+version = "0.1.0"
+description = "Python tools for loading and analyzing women's tackle football data."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Private" }
+
+authors = [
+    { name = "Zuri Hunter" }
+]
+
+keywords = [
+    "football",
+    "women's football",
+    "sports analytics",
+    "WFA",
+    "WNFC",
+    "data",
+    "sports"
+]
+
+dependencies = [
+    "polars>=1.0",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wtfpy"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+]
+
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+]
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
