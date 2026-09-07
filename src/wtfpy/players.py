@@ -12,7 +12,6 @@ from .loaders import BaseLoader
 from .utils import (
     LeagueInput,
     SeasonInput,
-    filter_dataframe,
     normalize_leagues,
     normalize_seasons,
 )

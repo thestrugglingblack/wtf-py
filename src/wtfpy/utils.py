@@ -15,7 +15,6 @@ from .exceptions import (
     InvalidFilterError,
 )
 
-
 SeasonInput: TypeAlias = int | Iterable[int] | None
 LeagueInput: TypeAlias = str | Iterable[str] | None
 

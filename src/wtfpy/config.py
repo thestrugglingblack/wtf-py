@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 
-
 WTF_DATA_PATH_ENV = "WTF_DATA_PATH"
 
 
