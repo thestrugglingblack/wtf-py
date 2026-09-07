@@ -10,9 +10,6 @@ from .exceptions import (
     DatasetNotFoundError,
     InvalidDatasetError,
 )
-
-from .config import WTF_DATA_PATH
-
 from .utils import (
     LeagueInput,
     SeasonInput,
@@ -36,9 +33,7 @@ SUPPORTED_DATASETS = {
 
 class BaseLoader:
     """
-    Base class for loading processed WTF datasets.
-
-    Dataset location always comes from the WTF_DATA_PATH environment variable.
+    Base loader for a single processed WTF dataset.
     """
 
     def __init__(
@@ -54,18 +49,31 @@ class BaseLoader:
 
     @property
     def data_path(self) -> Path:
-        """Return the configured processed-data directory."""
+        """
+        Return the current processed-data directory.
+
+        WTF_DATA_PATH is resolved each time this property is accessed.
+        """
         return get_data_path()
 
     @property
     def file_path(self) -> Path:
         """
-        Return the dataset file path.
+        Return the path to the requested dataset.
 
-        Parquet is preferred when both Parquet and CSV are available.
+        Parquet is preferred when both Parquet and CSV files exist.
         """
-        parquet_path = self.data_path / f"{self.dataset}.parquet"
-        csv_path = self.data_path / f"{self.dataset}.csv"
+        data_path = self.data_path
+
+        parquet_path = (
+            data_path
+            / f"{self.dataset}.parquet"
+        )
+
+        csv_path = (
+            data_path
+            / f"{self.dataset}.csv"
+        )
 
         if parquet_path.exists():
             return parquet_path
@@ -74,12 +82,14 @@ class BaseLoader:
             return csv_path
 
         raise DatasetNotFoundError(
-            f"Could not find dataset '{self.dataset}' in {self.data_path}. "
+            f"Could not find dataset '{self.dataset}' in {data_path}. "
             f"Expected {parquet_path.name} or {csv_path.name}."
         )
 
     def read(self) -> pl.DataFrame:
-        """Read the full dataset without applying filters."""
+        """
+        Read the complete dataset without applying filters.
+        """
         path = self.file_path
 
         if path.suffix.lower() == ".parquet":
@@ -104,9 +114,13 @@ class BaseLoader:
         seasons: SeasonInput = None,
         league: LeagueInput = None,
     ) -> pl.DataFrame:
-        """Load the dataset and optionally filter by season and league."""
+        """
+        Read the dataset and apply optional season and league filters.
+        """
+        df = self.read()
+
         return filter_dataframe(
-            self.read(),
+            df,
             seasons=seasons,
             league=league,
         )
@@ -116,11 +130,16 @@ class BaseLoader:
         *,
         league: LeagueInput = None,
     ) -> list[int]:
-        """Return seasons available in this dataset."""
-        df = filter_dataframe(
-            self.read(),
-            league=league,
-        )
+        """
+        Return sorted seasons available in this dataset.
+        """
+        df = self.read()
+
+        if league is not None:
+            df = filter_dataframe(
+                df,
+                league=league,
+            )
 
         return unique_sorted_seasons(df)
 
@@ -129,25 +148,18 @@ class BaseLoader:
         *,
         seasons: SeasonInput = None,
     ) -> list[str]:
-        """Return leagues available in this dataset."""
-        df = filter_dataframe(
-            self.read(),
-            seasons=seasons,
-        )
+        """
+        Return sorted leagues available in this dataset.
+        """
+        df = self.read()
+
+        if seasons is not None:
+            df = filter_dataframe(
+                df,
+                seasons=seasons,
+            )
 
         return unique_sorted_leagues(df)
-
-
-def _load_dataset(
-    dataset: str,
-    *,
-    seasons: SeasonInput = None,
-    league: LeagueInput = None,
-) -> pl.DataFrame:
-    return BaseLoader(dataset).load(
-        seasons=seasons,
-        league=league,
-    )
 
 
 def load_rosters(
@@ -155,9 +167,12 @@ def load_rosters(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed roster data."""
-    return _load_dataset(
-        "rosters",
+    """
+    Load processed roster data.
+    """
+    return BaseLoader(
+        "rosters"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -168,9 +183,12 @@ def load_games(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed game data."""
-    return _load_dataset(
-        "games",
+    """
+    Load processed game data.
+    """
+    return BaseLoader(
+        "games"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -181,9 +199,12 @@ def load_player_game_stats(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed player game statistics."""
-    return _load_dataset(
-        "player_game_stats",
+    """
+    Load processed player game statistics.
+    """
+    return BaseLoader(
+        "player_game_stats"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -194,9 +215,12 @@ def load_player_season_stats(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed player season statistics."""
-    return _load_dataset(
-        "player_season_stats",
+    """
+    Load processed player season statistics.
+    """
+    return BaseLoader(
+        "player_season_stats"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -207,9 +231,12 @@ def load_team_season_stats(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed team season statistics."""
-    return _load_dataset(
-        "team_season_stats",
+    """
+    Load processed team season statistics.
+    """
+    return BaseLoader(
+        "team_season_stats"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -220,9 +247,12 @@ def load_standings(
     seasons: SeasonInput = None,
     league: LeagueInput = None,
 ) -> pl.DataFrame:
-    """Load processed standings."""
-    return _load_dataset(
-        "standings",
+    """
+    Load processed standings data.
+    """
+    return BaseLoader(
+        "standings"
+    ).load(
         seasons=seasons,
         league=league,
     )
@@ -233,8 +263,15 @@ def available_seasons(
     league: LeagueInput = None,
     dataset: str = "games",
 ) -> list[int]:
-    """Return seasons available in a dataset."""
-    return BaseLoader(dataset).available_seasons(
+    """
+    Return sorted seasons available in a dataset.
+
+    Games are used by default because they are the best general source
+    of competition-season availability.
+    """
+    loader = BaseLoader(dataset)
+
+    return loader.available_seasons(
         league=league,
     )
 
@@ -244,7 +281,11 @@ def available_leagues(
     seasons: SeasonInput = None,
     dataset: str = "games",
 ) -> list[str]:
-    """Return leagues available in a dataset."""
-    return BaseLoader(dataset).available_leagues(
+    """
+    Return sorted leagues available in a dataset.
+    """
+    loader = BaseLoader(dataset)
+
+    return loader.available_leagues(
         seasons=seasons,
     )

@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TypeAlias
 
 import polars as pl
 
+from .config import get_wtf_data_path
 from .exceptions import (
     DatasetSchemaError,
     EnvironmentVariableError,
     InvalidFilterError,
 )
 
-from .config import WTF_DATA_PATH
 
 SeasonInput: TypeAlias = int | Iterable[int] | None
 LeagueInput: TypeAlias = str | Iterable[str] | None
@@ -25,11 +24,12 @@ def get_data_path() -> Path:
     """
     Return the processed-data directory from WTF_DATA_PATH.
 
-    WTF_DATA_PATH is the only supported data-location configuration.
+    The environment variable is read every time this function is called.
+    Nothing is cached at import time.
     """
-    raw_path = WTF_DATA_PATH
+    raw_path = get_wtf_data_path()
 
-    if raw_path is None or raw_path.strip() == "":
+    if raw_path is None or not raw_path.strip():
         raise EnvironmentVariableError(
             "WTF_DATA_PATH is not set. Set it to the directory containing "
             "the processed WTF datasets."
@@ -53,7 +53,9 @@ def get_data_path() -> Path:
 def normalize_seasons(
     seasons: SeasonInput,
 ) -> list[int] | None:
-    """Normalize season filters to a sorted unique list of integers."""
+    """
+    Normalize a season filter to a sorted unique list of integers.
+    """
     if seasons is None:
         return None
 
@@ -86,7 +88,9 @@ def normalize_seasons(
 def normalize_leagues(
     league: LeagueInput,
 ) -> list[str] | None:
-    """Normalize league filters to lowercase sorted unique values."""
+    """
+    Normalize league filters to lowercase sorted unique strings.
+    """
     if league is None:
         return None
 
@@ -123,12 +127,18 @@ def filter_dataframe(
     league: LeagueInput = None,
 ) -> pl.DataFrame:
     """
-    Apply season and league filters to a dataframe.
+    Apply optional season and league filters to a dataframe.
 
-    Filters are optional. League filtering is case-insensitive.
+    The dataframe must contain the relevant filter column if that
+    filter is requested.
     """
-    season_values = normalize_seasons(seasons)
-    league_values = normalize_leagues(league)
+    season_values = normalize_seasons(
+        seasons
+    )
+
+    league_values = normalize_leagues(
+        league
+    )
 
     result = df
 
@@ -140,8 +150,13 @@ def filter_dataframe(
 
         result = result.filter(
             pl.col("season")
-            .cast(pl.Int64, strict=False)
-            .is_in(season_values)
+            .cast(
+                pl.Int64,
+                strict=False,
+            )
+            .is_in(
+                season_values
+            )
         )
 
     if league_values is not None:
@@ -155,7 +170,9 @@ def filter_dataframe(
             .cast(pl.String)
             .str.strip_chars()
             .str.to_lowercase()
-            .is_in(league_values)
+            .is_in(
+                league_values
+            )
         )
 
     return result
@@ -164,7 +181,9 @@ def filter_dataframe(
 def unique_sorted_seasons(
     df: pl.DataFrame,
 ) -> list[int]:
-    """Return sorted unique season values."""
+    """
+    Return sorted unique season values from a dataframe.
+    """
     if "season" not in df.columns:
         raise DatasetSchemaError(
             "Dataset does not contain a 'season' column."
@@ -173,7 +192,10 @@ def unique_sorted_seasons(
     return (
         df.select(
             pl.col("season")
-            .cast(pl.Int64, strict=False)
+            .cast(
+                pl.Int64,
+                strict=False,
+            )
             .drop_nulls()
             .unique()
             .sort()
@@ -186,7 +208,9 @@ def unique_sorted_seasons(
 def unique_sorted_leagues(
     df: pl.DataFrame,
 ) -> list[str]:
-    """Return sorted unique lowercase league values."""
+    """
+    Return sorted unique lowercase league values from a dataframe.
+    """
     if "league" not in df.columns:
         raise DatasetSchemaError(
             "Dataset does not contain a 'league' column."

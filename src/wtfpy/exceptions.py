@@ -14,7 +14,7 @@ class DatasetNotFoundError(WTFPyError):
 
 
 class InvalidDatasetError(WTFPyError):
-    """Raised when a dataset name is not supported."""
+    """Raised when a requested dataset is not supported."""
 
 
 class InvalidFilterError(WTFPyError):
@@ -22,4 +22,14 @@ class InvalidFilterError(WTFPyError):
 
 
 class DatasetSchemaError(WTFPyError):
-    """Raised when a dataset is missing a required column."""
+    """Raised when a dataset does not contain required columns."""
+
+
+class DataRelationshipError(WTFPyError):
+    """
+    Raised when related datasets cannot be joined or filtered safely.
+
+    For example, this is used when player filtering depends on roster
+    membership but the roster dataset is missing player_id, season,
+    or league information.
+    """
