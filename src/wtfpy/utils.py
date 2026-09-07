@@ -15,7 +15,7 @@ from .exceptions import (
     InvalidFilterError,
 )
 
-WTF_DATA_PATH_ENV = "WTF_DATA_PATH"
+from .config import WTF_DATA_PATH
 
 SeasonInput: TypeAlias = int | Iterable[int] | None
 LeagueInput: TypeAlias = str | Iterable[str] | None
@@ -27,7 +27,7 @@ def get_data_path() -> Path:
 
     WTF_DATA_PATH is the only supported data-location configuration.
     """
-    raw_path = os.getenv(WTF_DATA_PATH_ENV)
+    raw_path = WTF_DATA_PATH
 
     if raw_path is None or raw_path.strip() == "":
         raise EnvironmentVariableError(

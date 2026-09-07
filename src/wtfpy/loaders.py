@@ -6,16 +6,13 @@ from pathlib import Path
 
 import polars as pl
 
-try:
-    from .exceptions import (
-        DatasetNotFoundError,
-        InvalidDatasetError,
-    )
-except ImportError:  # pragma: no cover - fallback for some tooling setups
-    from wtfpy.exceptions import (
-        DatasetNotFoundError,
-        InvalidDatasetError,
-    )
+from .exceptions import (
+    DatasetNotFoundError,
+    InvalidDatasetError,
+)
+
+from .config import WTF_DATA_PATH
+
 from .utils import (
     LeagueInput,
     SeasonInput,
