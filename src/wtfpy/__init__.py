@@ -1,5 +1,17 @@
 """Public API for wtfpy."""
 
+from .analytics import (
+    Analytics,
+    AnalyticsLoader,
+    available_analytics_leagues,
+    available_analytics_seasons,
+    load_analytics_player_game_logs,
+    load_analytics_player_season_stats,
+    load_analytics_players,
+    load_player_career_stats,
+    load_qb_season_stats,
+    load_team_season_summary,
+)
 from .exceptions import (
     DataRelationshipError,
     DatasetNotFoundError,
@@ -29,7 +41,8 @@ from .teams import (
     load_teams,
 )
 
-__version__ = "0.1.0"
+
+__version__ = "0.2.0"
 
 
 __all__ = [
@@ -41,8 +54,10 @@ __all__ = [
     "DatasetSchemaError",
     "DataRelationshipError",
     "BaseLoader",
+    "AnalyticsLoader",
     "Players",
     "Teams",
+    "Analytics",
     "load_teams",
     "load_players",
     "load_rosters",
@@ -53,4 +68,12 @@ __all__ = [
     "load_standings",
     "available_seasons",
     "available_leagues",
+    "load_analytics_players",
+    "load_analytics_player_game_logs",
+    "load_analytics_player_season_stats",
+    "load_qb_season_stats",
+    "load_player_career_stats",
+    "load_team_season_summary",
+    "available_analytics_seasons",
+    "available_analytics_leagues",
 ]
