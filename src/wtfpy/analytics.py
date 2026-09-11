@@ -18,7 +18,12 @@ Expected layout:
     └── mart_team_season_summary.parquet
 
 WTF_DATA_PATH should continue pointing to the canonical
-datasets directory.
+datasets directory:
+
+    <release>/datasets
+
+Path resolution between canonical and analytics datasets is handled
+internally by wtfpy.
 """
 
 from __future__ import annotations
@@ -35,7 +40,7 @@ from .utils import (
     LeagueInput,
     SeasonInput,
     filter_dataframe,
-    get_data_path,
+    get_layer_path,
     unique_sorted_leagues,
     unique_sorted_seasons,
 )
@@ -54,6 +59,16 @@ SUPPORTED_ANALYTICS_DATASETS = {
 class AnalyticsLoader:
     """
     Loader for a published WTF analytics mart.
+
+    Analytics datasets are resolved relative to WTF_DATA_PATH.
+
+    Example:
+
+        WTF_DATA_PATH=<release>/datasets
+
+    resolves analytics data from:
+
+        <release>/analytics
     """
 
     def __init__(
@@ -70,44 +85,23 @@ class AnalyticsLoader:
     @property
     def analytics_path(self) -> Path:
         """
-        Return the analytics directory associated with WTF_DATA_PATH.
+        Return the published analytics directory.
 
-        Normal layout:
+        WTF_DATA_PATH points to the canonical datasets directory:
 
-        release/
-        ├── datasets/   <- WTF_DATA_PATH
-        └── analytics/
+            <release>/datasets
+
+        The analytics layer is resolved as:
+
+            <release>/analytics
         """
-
-        data_path = get_data_path()
-
-        sibling_path = (
-            data_path.parent
-            / "analytics"
-        )
-
-        nested_path = (
-            data_path
-            / "analytics"
-        )
-
-        if sibling_path.exists():
-            return sibling_path
-
-        if nested_path.exists():
-            return nested_path
-
-        raise DatasetNotFoundError(
-            "Could not find the published analytics directory. "
-            f"Expected {sibling_path}."
-        )
+        return get_layer_path("analytics")
 
     @property
     def file_path(self) -> Path:
         """
         Return the Parquet path for the requested analytics mart.
         """
-
         path = (
             self.analytics_path
             / f"{self.dataset}.parquet"
@@ -119,13 +113,18 @@ class AnalyticsLoader:
                 f"'{self.dataset}'. Expected {path}."
             )
 
+        if not path.is_file():
+            raise DatasetNotFoundError(
+                "Analytics dataset path is not a file: "
+                f"{path}"
+            )
+
         return path
 
     def read(self) -> pl.DataFrame:
         """
         Read the complete analytics mart.
         """
-
         return pl.read_parquet(
             self.file_path
         )
@@ -137,9 +136,8 @@ class AnalyticsLoader:
         league: LeagueInput = None,
     ) -> pl.DataFrame:
         """
-        Load an analytics mart with optional filters.
+        Load an analytics mart with optional season and league filters.
         """
-
         dataframe = self.read()
 
         return filter_dataframe(
@@ -154,9 +152,8 @@ class AnalyticsLoader:
         league: LeagueInput = None,
     ) -> list[int]:
         """
-        Return seasons represented in this mart.
+        Return seasons represented in this analytics mart.
         """
-
         dataframe = self.read()
 
         if league is not None:
@@ -175,9 +172,8 @@ class AnalyticsLoader:
         seasons: SeasonInput = None,
     ) -> list[str]:
         """
-        Return leagues represented in this mart.
+        Return leagues represented in this analytics mart.
         """
-
         dataframe = self.read()
 
         if seasons is not None:
@@ -194,6 +190,13 @@ class AnalyticsLoader:
 class Analytics:
     """
     Access WTF analytical datasets.
+
+    Examples
+    --------
+    >>> analytics = Analytics()
+    >>> analytics.qb_season_stats()
+    >>> analytics.player_career_stats()
+    >>> analytics.team_season_summary()
     """
 
     def __init__(self) -> None:
@@ -230,7 +233,6 @@ class Analytics:
         """
         Load the historical analytical player directory.
         """
-
         return self._players.load(
             seasons=seasons,
             league=league,
@@ -245,7 +247,6 @@ class Analytics:
         """
         Load enriched player game logs.
         """
-
         return self._player_game_logs.load(
             seasons=seasons,
             league=league,
@@ -260,7 +261,6 @@ class Analytics:
         """
         Load analytical player season statistics.
         """
-
         return self._player_season_stats.load(
             seasons=seasons,
             league=league,
@@ -275,7 +275,6 @@ class Analytics:
         """
         Load quarterback season analytics.
         """
-
         return self._qb_season_stats.load(
             seasons=seasons,
             league=league,
@@ -289,10 +288,9 @@ class Analytics:
         """
         Load player career analytics.
 
-        Career records do not contain a single season,
-        so only league filtering is supported.
+        Career records do not contain a single season, so only league
+        filtering is supported.
         """
-
         return self._player_career_stats.load(
             league=league,
         )
@@ -306,7 +304,6 @@ class Analytics:
         """
         Load team season summaries.
         """
-
         return self._team_season_summary.load(
             seasons=seasons,
             league=league,
@@ -321,7 +318,6 @@ def load_analytics_players(
     """
     Load the analytical historical player directory.
     """
-
     return AnalyticsLoader(
         "mart_players"
     ).load(
@@ -338,7 +334,6 @@ def load_analytics_player_game_logs(
     """
     Load enriched player game logs.
     """
-
     return AnalyticsLoader(
         "mart_player_game_logs"
     ).load(
@@ -355,7 +350,6 @@ def load_analytics_player_season_stats(
     """
     Load analytical player season statistics.
     """
-
     return AnalyticsLoader(
         "mart_player_season_stats"
     ).load(
@@ -372,7 +366,6 @@ def load_qb_season_stats(
     """
     Load quarterback season analytics.
     """
-
     return AnalyticsLoader(
         "mart_qb_season_stats"
     ).load(
@@ -388,7 +381,6 @@ def load_player_career_stats(
     """
     Load player career analytics.
     """
-
     return AnalyticsLoader(
         "mart_player_career_stats"
     ).load(
@@ -404,7 +396,6 @@ def load_team_season_summary(
     """
     Load analytical team season summaries.
     """
-
     return AnalyticsLoader(
         "mart_team_season_summary"
     ).load(
@@ -421,7 +412,6 @@ def available_analytics_seasons(
     """
     Return seasons available in an analytical dataset.
     """
-
     return AnalyticsLoader(
         dataset
     ).available_seasons(
@@ -437,7 +427,6 @@ def available_analytics_leagues(
     """
     Return leagues available in an analytical dataset.
     """
-
     return AnalyticsLoader(
         dataset
     ).available_leagues(

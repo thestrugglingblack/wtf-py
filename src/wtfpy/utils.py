@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import polars as pl
 
 from .config import get_wtf_data_path
 from .exceptions import (
+    DatasetNotFoundError,
     DatasetSchemaError,
     EnvironmentVariableError,
     InvalidFilterError,
@@ -17,11 +18,17 @@ from .exceptions import (
 
 SeasonInput: TypeAlias = int | Iterable[int] | None
 LeagueInput: TypeAlias = str | Iterable[str] | None
+DataLayer: TypeAlias = Literal["canonical", "analytics"]
 
 
 def get_data_path() -> Path:
     """
-    Return the processed-data directory from WTF_DATA_PATH.
+    Return the canonical dataset directory from WTF_DATA_PATH.
+
+    WTF_DATA_PATH should point to the published canonical datasets
+    directory, for example:
+
+        <release>/datasets
 
     The environment variable is read every time this function is called.
     Nothing is cached at import time.
@@ -30,8 +37,8 @@ def get_data_path() -> Path:
 
     if raw_path is None or not raw_path.strip():
         raise EnvironmentVariableError(
-            "WTF_DATA_PATH is not set. Set it to the directory containing "
-            "the processed WTF datasets."
+            "WTF_DATA_PATH is not set. Set it to the published canonical "
+            "datasets directory, for example <release>/datasets."
         )
 
     path = Path(raw_path).expanduser().resolve()
@@ -47,6 +54,68 @@ def get_data_path() -> Path:
         )
 
     return path
+
+
+def get_release_path() -> Path:
+    """
+    Return the release root associated with WTF_DATA_PATH.
+
+    Expected release layout:
+
+        <release>/
+        ├── datasets/
+        └── analytics/
+
+    WTF_DATA_PATH points to:
+
+        <release>/datasets
+    """
+    data_path = get_data_path()
+
+    if data_path.name == "datasets":
+        return data_path.parent
+
+    return data_path
+
+
+def get_layer_path(
+    layer: DataLayer,
+) -> Path:
+    """
+    Return the directory for a published data layer.
+
+    Supported layers:
+
+        canonical -> <release>/datasets
+        analytics -> <release>/analytics
+
+    WTF_DATA_PATH remains configured once and points to the canonical
+    datasets directory.
+    """
+    if layer == "canonical":
+        return get_data_path()
+
+    if layer == "analytics":
+        release_path = get_release_path()
+        analytics_path = release_path / "analytics"
+
+        if not analytics_path.exists():
+            raise DatasetNotFoundError(
+                "Could not find the published analytics directory. "
+                f"Expected: {analytics_path}"
+            )
+
+        if not analytics_path.is_dir():
+            raise DatasetNotFoundError(
+                "Published analytics path is not a directory: "
+                f"{analytics_path}"
+            )
+
+        return analytics_path
+
+    raise ValueError(
+        f"Unsupported data layer: {layer}"
+    )
 
 
 def normalize_seasons(

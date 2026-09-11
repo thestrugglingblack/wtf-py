@@ -14,7 +14,7 @@ from .utils import (
     LeagueInput,
     SeasonInput,
     filter_dataframe,
-    get_data_path,
+    get_layer_path,
     unique_sorted_leagues,
     unique_sorted_seasons,
 )
@@ -33,7 +33,7 @@ SUPPORTED_DATASETS = {
 
 class BaseLoader:
     """
-    Base loader for a single processed WTF dataset.
+    Base loader for a single canonical WTF dataset.
     """
 
     def __init__(
@@ -50,11 +50,9 @@ class BaseLoader:
     @property
     def data_path(self) -> Path:
         """
-        Return the current processed-data directory.
-
-        WTF_DATA_PATH is resolved each time this property is accessed.
+        Return the published canonical dataset directory.
         """
-        return get_data_path()
+        return get_layer_path("canonical")
 
     @property
     def file_path(self) -> Path:
